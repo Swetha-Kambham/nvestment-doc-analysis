@@ -13,26 +13,31 @@ def extract_text_from_pdf(pdf_path):
                 text += page_text + '\n'
     return text
 
-# Step 2: Run classification
+# Step 2: Run zero-shot classification (optional, just for info)
 def classify_text(text):
     classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
-    labels = ["Revenue", "EBITDA", "Acquisition", "Growth", "Valuation"]
-    return classifier(text[:1000], candidate_labels=labels)
+    labels = ["Revenue", "EBITDA", "Growth", "Acquisition", "Valuation"]
+    result = classifier(text[:1000], candidate_labels=labels)
+    print("Classification results:", result)
+    return result
 
-# Step 3: Extract KPI patterns
+# Step 3: Extract KPI metric + value pairs
 def extract_kpis(text):
-    return re.findall(r"(Revenue|EBITDA|Profit).*?\$?[0-9,.]+", text, re.IGNORECASE)
+    pattern = r"(Revenue|EBITDA|Profit|Growth|Valuation|Acquisition)[^\n\r:]*[:\-]?\s*\$?([0-9.,]+(?:\s?%|\s?M)?)"
+    return re.findall(pattern, text, re.IGNORECASE)
 
-# Step 4: Save to Excel
+# Step 4: Save results to Excel
 def save_to_excel(kpis, output_path="extracted_kpis.xlsx"):
+    if not kpis:
+        print("No KPI data found.")
+        return
     df = pd.DataFrame(kpis, columns=["Metric", "Value"])
     df.to_excel(output_path, index=False)
     print(f"KPI data saved to {output_path}")
 
 if __name__ == "__main__":
-    path = "sample_investment.pdf"
+    path = "sample_investment.pdf"  # Or replace with your actual filename
     text = extract_text_from_pdf(path)
-    classifications = classify_text(text)
-    print("Classification results:", classifications)
+    classify_text(text)
     kpi_data = extract_kpis(text)
     save_to_excel(kpi_data)
